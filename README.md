@@ -1,6 +1,5 @@
-基于 vue3 的功能，一点一点的拆分出来。
+Based on the functions of vue3, it is split bit by bit.
 
-编写测试用例 基于TDD思想开发
+Write test cases and develop based on TDD thinking
 
-实现一个mini的vue3
-
+Implement a mini vue3
