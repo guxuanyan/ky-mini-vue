@@ -7,5 +7,7 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
+    "types": ["jest"],
+    "lib": ["DOM", "ES6"]
   }
 }
