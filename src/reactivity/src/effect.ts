@@ -5,13 +5,12 @@
 
 class ReactiveEffect {
     private _fn: Function
-    constructor(fn: Function) {
+    constructor(fn: Function, public options?: any) {
         this._fn = fn
     }
     _run() {
-
         activeEffect = this
-        this._fn()
+        return this._fn()
     }
 }
 // 全局容器
@@ -55,12 +54,18 @@ export function trigger(target: any, key: any): any {
     const depMap = targetMap.get(target)
     const deps = depMap.get(key)
     for (const effect of deps) {
-        effect._run()
+        if (effect.options.scheduler) {
+            effect.options.scheduler()
+        } else {
+            effect._run()
+        }
+
     }
 }
 let activeEffect: any
-export function effect(fn: Function): any {
-    const _effect = new ReactiveEffect(fn)
+export function effect(fn: Function, options: any = {}): any {
+    const _effect = new ReactiveEffect(fn, options)
     _effect._run()
+    return _effect._run.bind(_effect)
 }
 
