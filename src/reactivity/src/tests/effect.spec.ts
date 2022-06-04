@@ -2,7 +2,7 @@ import { reactive } from "../reactive";
 import { effect, stop } from "../effect";
 
 describe('effect', () => {
-    it("effect hellw path", () => {
+    it("effect happly path", () => {
         const user = reactive({ age: 10 })
         let nextAge
         effect(() => {

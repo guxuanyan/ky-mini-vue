@@ -9,27 +9,19 @@
  */
 
 
-import { get, set, readonlyGet } from "./baseHandler"
+import { readonlyHandlers, mutableHandlers } from "./baseHandler"
 
 
 export function reactive(raw: any): any {
-    return new Proxy(raw, {
-        get,
-        set
-    })
+    return createProxyObject(raw, mutableHandlers)
 }
 
 
 export function readonly(raw: any): any {
-    return new Proxy(raw, {
-        get: readonlyGet,
-        set(target: any, key: any) {
-            console.warn(`
-                Cannot be modified because it is read-only：${target}
-            `)
-            return Reflect.get(target, key)
-        }
-    })
+    return createProxyObject(raw, readonlyHandlers)
 }
 
 
+function createProxyObject(raw: any, ProxyHandlers: any) {
+    return new Proxy(raw, ProxyHandlers)
+}
