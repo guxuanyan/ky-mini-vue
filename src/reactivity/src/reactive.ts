@@ -7,20 +7,29 @@
  *
  *
  */
-import { track, trigger } from "./effect"
+
+
+import { get, set, readonlyGet } from "./baseHandler"
+
+
 export function reactive(raw: any): any {
-
     return new Proxy(raw, {
-        get(target, key) {
-            track(target, key)
-            return Reflect.get(target, key)
-        },
+        get,
+        set
+    })
+}
 
-        set(target, key, value) {
-            const result = Reflect.set(target, key, value)
-            trigger(target, key)
-            return result
+
+export function readonly(raw: any): any {
+    return new Proxy(raw, {
+        get: readonlyGet,
+        set(target: any, key: any) {
+            console.warn(`
+                Cannot be modified because it is read-only：${target}
+            `)
+            return Reflect.get(target, key)
         }
     })
-
 }
+
+
