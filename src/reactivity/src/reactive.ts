@@ -8,20 +8,34 @@
  *
  */
 
-
-import { readonlyHandlers, mutableHandlers } from "./baseHandler"
-
+import {
+  readonlyHandlers,
+  mutableHandlers,
+  shallowReadonlyHandles,
+  ReactiveFlags,
+} from "./baseHandler";
 
 export function reactive(raw: any): any {
-    return createProxyObject(raw, mutableHandlers)
+  return createProxyObject(raw, mutableHandlers);
 }
-
 
 export function readonly(raw: any): any {
-    return createProxyObject(raw, readonlyHandlers)
+  return createProxyObject(raw, readonlyHandlers);
 }
 
-
 function createProxyObject(raw: any, ProxyHandlers: any) {
-    return new Proxy(raw, ProxyHandlers)
+  return new Proxy(raw, ProxyHandlers);
+}
+
+export function isReadonly(target: any): any {
+  return !!target[ReactiveFlags.ISREADONLY];
+}
+
+export function isReactive(target: any): any {
+  return !!target[ReactiveFlags.ISREACTIVE];
+}
+
+export function shallowReadonly(raw: any) {
+  // raw
+  return createProxyObject(raw, shallowReadonlyHandles);
 }
