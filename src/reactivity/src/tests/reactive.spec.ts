@@ -1,4 +1,4 @@
-import { reactive, isReactive } from "../reactive";
+import { reactive, isReactive, isProxy } from "../reactive";
 
 describe("reactive test", () => {
   it("happly path", () => {
@@ -9,6 +9,9 @@ describe("reactive test", () => {
     expect(original).not.toBe(observed);
     expect(original.age).toBe(1);
     expect(observed.age).toBe(1);
+    // add isProxy testing
+    expect(isProxy(observed)).toBe(true);
+    expect(isProxy(original)).toBe(false);
   });
 
   it("isReadonly", () => {

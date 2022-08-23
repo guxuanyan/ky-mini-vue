@@ -8,6 +8,7 @@
  *
  */
 
+import { isObject } from "../../tools";
 import {
   readonlyHandlers,
   mutableHandlers,
@@ -23,7 +24,7 @@ export function readonly(raw: any): any {
   return createProxyObject(raw, readonlyHandlers);
 }
 
-function createProxyObject(raw: any, ProxyHandlers: any) {
+export function createProxyObject(raw: any, ProxyHandlers: any) {
   return new Proxy(raw, ProxyHandlers);
 }
 
@@ -38,4 +39,8 @@ export function isReactive(target: any): any {
 export function shallowReadonly(raw: any) {
   // raw
   return createProxyObject(raw, shallowReadonlyHandles);
+}
+
+export function isProxy(val: any) {
+  return isReactive(val) || isReadonly(val);
 }

@@ -1,4 +1,4 @@
-import { isReactive, isReadonly, readonly } from "../reactive";
+import { isReactive, isReadonly, readonly, isProxy } from "../reactive";
 
 describe("readonly", () => {
   it("happly Path", () => {});
@@ -9,6 +9,8 @@ describe("readonly", () => {
     });
     user.age = 20;
     expect(console.warn).toBeCalled();
+    // add isProxy testing
+    expect(isProxy(user)).toBe(true);
   });
 
   it("isReadonly", () => {
