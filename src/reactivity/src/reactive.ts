@@ -7,8 +7,6 @@
  *
  *
  */
-
-import { isObject } from "../../tools";
 import {
   readonlyHandlers,
   mutableHandlers,

@@ -2,7 +2,7 @@ import { reactive } from "../reactive";
 import { effect, stop } from "../effect";
 
 describe('effect', () => {
-    it("effect happly path", () => {
+    it("happly path", () => {
         const user = reactive({ age: 10 })
         let nextAge
         effect(() => {
@@ -13,7 +13,7 @@ describe('effect', () => {
         user.age++
         expect(nextAge).toBe(12)
     })
-    it("return runner. get runner return content", () => {
+    it("return runner", () => {
         const user = reactive({
             age: 10
         })
@@ -65,7 +65,6 @@ describe('effect', () => {
         runner();
         expect(dummy).toBe(3);
     });
-
     it("onStop", () => {
         const obj = reactive({
             foo: 1,

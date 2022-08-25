@@ -26,17 +26,15 @@ const depsEffect: Array<Set<ReactiveEffect>> = new Array();
 let activeEffect: any;
 // 是否出发了依赖
 let shouldTrack = false;
-class ReactiveEffect {
+export class ReactiveEffect {
   active = true;
   private _fn: Function;
   onStop: Function = () => {};
-  isStop: Boolean = true;
   constructor(fn: Function, public scheduler?: any) {
     this._fn = fn;
   }
 
   _run() {
-    console.log("run");
     // 运行 run 的时候，可以控制 要不要执行后续收集依赖的一步
     // 目前来看的话，只要执行了 fn 那么就默认执行了收集依赖
     // 这里就需要控制了
@@ -63,14 +61,19 @@ class ReactiveEffect {
   }
 
   stop() {
-    if (!this.isStop) return;
-    if (this.onStop) this.onStop();
-    cleaupEffects(this);
-    this.isStop = false;
+    if (this.active) {
+      // 如果第一次执行 stop 后 active 就 false 了
+      // 这是为了防止重复的调用，执行 stop 逻辑
+      cleanupEffect(this);
+      if (this.onStop) {
+        this.onStop();
+      }
+      this.active = false;
+    }
   }
 }
 
-function cleaupEffects(reactiveEffect: any) {
+function cleanupEffect(reactiveEffect: any) {
   depsEffect.forEach((dep: any) => {
     if (dep.has(reactiveEffect)) {
       dep.delete(reactiveEffect);
@@ -80,9 +83,8 @@ function cleaupEffects(reactiveEffect: any) {
 
 // 收集依赖
 export function track(target: any, key: any): any {
-  if (!isTracking()) {
-    return;
-  }
+  if (!isTracking()) return;
+
   let depsMap = targetMap.get(target);
   if (!depsMap) {
     depsMap = new Map();
@@ -104,8 +106,10 @@ export function trackEffects(dep: any) {
 // 触发依赖
 export function trigger(target: any, key: any): any {
   const depMap = targetMap.get(target);
-  const deps = depMap.get(key);
-  triggerEffects(deps);
+  if (!depMap) return;
+  const dep = depMap.get(key);
+  if (!dep) return;
+  triggerEffects(dep);
 }
 
 export function isTracking() {
