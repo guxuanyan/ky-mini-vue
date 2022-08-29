@@ -2,6 +2,7 @@ import { h } from "../../libs/dist/build-mini-vue.esm.js";
 
 export default {
   render() {
+    Reflect.set(window, "self", this);
     return h(
       "div",
       {
@@ -11,21 +12,26 @@ export default {
       // "hello " + this.msg
       //  ----- array > {type, props, children}
       [
-        {
-          type: "h1",
-          props: {
-            className: ["red", "head", "title"],
+        h(
+          "h1",
+          {
+            class: ["red", "title"],
+            style: {
+              color: "pink",
+            },
           },
-          children: "title",
-        },
-        {
-          type: "span",
-          props: {
-            className: ["content", "blue"],
+          "implement： " + this.msg
+        ),
+        h(
+          "span",
+          {
+            class: ["blue", "content"],
+            style: {
+              "margin-left": "2em",
+            },
           },
-          //  children --> string || array
-          children: "content",
-        },
+          "需要" + this.implement.join("、") + "核心模块。"
+        ),
       ]
     );
   },
@@ -33,6 +39,7 @@ export default {
   setup() {
     return {
       msg: "mini-vue",
+      implement: ["reactive", "runtime-core", "compiler"],
     };
   },
 };

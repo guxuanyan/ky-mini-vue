@@ -7,6 +7,7 @@ function createVNode(type, props, children) {
         type,
         props,
         children,
+        elm: null,
     };
     return vnode;
 }
@@ -15,6 +16,7 @@ function h(type, props, children) {
     return createVNode(type, props, children);
 }
 
+const extend = Object.assign;
 const isObject = (val) => {
     return val !== null && typeof val == "object";
 };
@@ -23,11 +25,13 @@ function createComponentInstance(vnode) {
     const component = {
         vnode,
         type: vnode.type,
+        setupState: {},
+        proxy: null,
     };
     return component;
 }
 function setupComponent(instance) {
-    // TODO
+    // TODO:
     // initProps
     // initSlots
     // vue3 里除了有状态的组件还有函数组件（没有状态）
@@ -43,7 +47,7 @@ function setupStatefulComponent(instance) {
     }
 }
 function handleSetupResult(instance, setupResult) {
-    // TODO
+    // TODO:
     // function
     if (typeof setupResult == "object") {
         instance.setupState = setupResult;
@@ -58,6 +62,23 @@ function finishComponentSetup(instance) {
     }
 }
 
+const componentHandlesImpl = {
+    $el: (instance) => Reflect.get(instance.vnode, "elm"),
+    $data: (instance) => Reflect.get(instance, "setupState"),
+};
+const publicInstanceProxyHandles = {
+    get(target, key) {
+        const instance = Reflect.get(target, "_");
+        if (key in instance.setupState) {
+            return Reflect.get(instance.setupState, key);
+        }
+        const componentHandlesResult = Reflect.get(componentHandlesImpl, key);
+        if (componentHandlesResult) {
+            return componentHandlesResult(instance);
+        }
+    },
+};
+
 /**
  * 处理组件
  */
@@ -68,15 +89,20 @@ function processComponent(vnode, container) {
 function mountComponent(vnode, container) {
     // 创建组件实例
     const instance = createComponentInstance(vnode);
+    // 设置组件代理
+    Reflect.set(instance, "proxy", new Proxy({ _: instance }, publicInstanceProxyHandles));
     // 调用组件setup
     setupComponent(instance);
     // 调用render
-    setupRenderEffect(instance, container);
+    setupRenderEffect(instance, container, vnode);
 }
-function setupRenderEffect(instance, container) {
+function setupRenderEffect(instance, container, vnode) {
     // call 后续参数传入参数列表
-    const subTree = instance.render.call(instance.setupState);
+    // subTree == root element
+    const { proxy } = instance;
+    const subTree = instance.render.call(proxy);
     patch(subTree, container);
+    vnode.elm = subTree.elm;
 }
 
 /**
@@ -85,28 +111,27 @@ function setupRenderEffect(instance, container) {
 function processElement(vnode, container) {
     // init or update
     mountElement(vnode, container);
+    // TODO: update
 }
-function mountElement(vnode, container) {
-    const { type: tag, props, children } = vnode;
+function mountElement(initialVNode, container) {
+    const { type: tag, props, children } = initialVNode;
     const elm = document.createElement(tag);
-    setProps(elm, props);
-    setChildren(elm, children);
+    handleProps(elm, props);
+    mountChildren(elm, children);
+    initialVNode.elm = elm;
     container.append(elm);
 }
-function setProps(elm, props) {
+function handleProps(elm, props) {
     // props > string or object
     if (isObject(props)) {
         for (const key in props) {
             const val = props[key];
-            if (key == "class" || key == "className") {
-                elm.className = Array.isArray(val) ? val.join(" ") : val;
-                continue;
-            }
-            elm.setAttribute(key, val);
+            //   class ==> array or string
+            setAttribute(elm, key, val);
         }
     }
 }
-function setChildren(elm, children) {
+function mountChildren(elm, children) {
     //  children --->> string or Array
     if (typeof children == "string") {
         elm.textContent = children;
@@ -116,6 +141,23 @@ function setChildren(elm, children) {
             patch(item, elm);
         });
     }
+}
+const publicPropHandles = {
+    class: (elm, val) => (Array.isArray(val) ? val.join(" ") : val),
+    style: (elm, val) => typeof isObject(val) ? extend(elm.style, val) : val,
+};
+function setAttribute(elm, key, val) {
+    const handlePublicFn = Reflect.get(publicPropHandles, key);
+    let result = "";
+    if (handlePublicFn) {
+        result = handlePublicFn(elm, val);
+        if (typeof result != "string")
+            return;
+    }
+    else {
+        result = val;
+    }
+    elm.setAttribute(key, result);
 }
 
 function render(vnode, container) {
