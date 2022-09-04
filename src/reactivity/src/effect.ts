@@ -19,6 +19,8 @@ import { extend } from "../../tools";
  * }
  * dep 存储所有的fn
  */
+
+                          
 const targetMap = new Map();
 // 收集 effect 的容器 用于 stop 删除
 const depsEffect: Array<Set<ReactiveEffect>> = new Array();

@@ -2,7 +2,8 @@
  * 处理DOM vnode to dom
  */
 
-import { extend, isObject } from "../../tools";
+import { extend, getEventName, isFunction, isObject, isOn } from "../../tools";
+import { ShapeFlags } from "../../tools/ShapeFlags";
 import { patch } from "./render";
 
 export function processElement(vnode: any, container: any) {
@@ -12,10 +13,11 @@ export function processElement(vnode: any, container: any) {
 }
 
 function mountElement(initialVNode: any, container: any) {
-  const { type: tag, props, children } = initialVNode;
+  const { type: tag, props, children, shapeFlags } = initialVNode;
   const elm = document.createElement(tag);
   handleProps(elm, props);
-  mountChildren(elm, children);
+
+  mountChildren(elm, children, shapeFlags);
   initialVNode.elm = elm;
   container.append(elm);
 }
@@ -25,21 +27,28 @@ function handleProps(elm: any, props: any) {
   if (isObject(props)) {
     for (const key in props) {
       const val = props[key];
-      //   class ==> array or string
-      setAttribute(elm, key, val);
+      if (isEvent(key, val)) {
+        handleEvent(elm, key, val);
+      } else {
+        handleAttributes(elm, key, val);
+      }
     }
   }
 }
 
-function mountChildren(elm: any, children: any) {
+function mountChildren(elm: any, children: any, shapeFlags: any) {
   //  children --->> string or Array
-  if (typeof children == "string") {
+  if (shapeFlags & ShapeFlags.TEXT_CHLIDREN) {
     elm.textContent = children;
-  } else if (Array.isArray(children)) {
-    children.forEach((item) => {
-      patch(item, elm);
-    });
+  } else if (shapeFlags & ShapeFlags.ARRAY_CHLIDREN) {
+    patchMountChildren(children, elm);
   }
+}
+
+function patchMountChildren(children: Array<any>, elm: any) {
+  children.forEach((item) => {
+    patch(item, elm);
+  });
 }
 
 const publicPropHandles = {
@@ -48,7 +57,8 @@ const publicPropHandles = {
     typeof isObject(val) ? extend(elm.style, val) : val,
 };
 
-function setAttribute(elm: any, key: string, val: any): any {
+function handleAttributes(elm: any, key: string, val: any): any {
+  // class ==> array or string
   const handlePublicFn = Reflect.get(publicPropHandles, key);
   let result = "";
   if (handlePublicFn) {
@@ -58,4 +68,17 @@ function setAttribute(elm: any, key: string, val: any): any {
     result = val;
   }
   elm.setAttribute(key, result);
+}
+
+/**
+ * 命名 onC 是一on开头且三个字母大写
+ * @param event  事件名称
+ * @param cb  回调函数
+ * @returns
+ */
+function isEvent(event: any, cb: any) {
+  return isOn(event) && isFunction(cb);
+}
+function handleEvent(elm: any, event: string, cb: any) {
+  elm.addEventListener(getEventName(event), cb);
 }

@@ -1,21 +1,48 @@
+const extend = Object.assign;
+const isObject = (val) => {
+    return val !== null && typeof val == "object";
+};
+function isString(val) {
+    return typeof val == "string";
+}
+function isArray(val) {
+    return Array.isArray(val);
+}
+const isOn = (str) => /on[A-Z]/.test(str);
+function getEventName(str) {
+    return str.slice(2).toLowerCase();
+}
+const isFunction = (fn) => typeof fn == "function";
+
 function createVNode(type, props, children) {
     const vnode = {
         type,
         props,
         children,
         elm: null,
+        shapeFlags: getTypeShapeFlags(type),
     };
+    getChildrenShapeFlags(children, vnode);
     return vnode;
+}
+function getTypeShapeFlags(type) {
+    return typeof type == "string"
+        ? 1 /* ELEMENT */
+        : 2 /* STATEFUL_COMPONENT */;
+}
+function getChildrenShapeFlags(children, vnode) {
+    // children 的值
+    if (isString(children)) {
+        vnode.shapeFlags |= 4 /* TEXT_CHLIDREN */;
+    }
+    else if (isArray(children)) {
+        vnode.shapeFlags |= 8 /* ARRAY_CHLIDREN */;
+    }
 }
 
 function h(type, props, children) {
     return createVNode(type, props, children);
 }
-
-const extend = Object.assign;
-const isObject = (val) => {
-    return val !== null && typeof val == "object";
-};
 
 function createComponentInstance(vnode) {
     const component = {
@@ -110,10 +137,10 @@ function processElement(vnode, container) {
     // TODO: update
 }
 function mountElement(initialVNode, container) {
-    const { type: tag, props, children } = initialVNode;
+    const { type: tag, props, children, shapeFlags } = initialVNode;
     const elm = document.createElement(tag);
     handleProps(elm, props);
-    mountChildren(elm, children);
+    mountChildren(elm, children, shapeFlags);
     initialVNode.elm = elm;
     container.append(elm);
 }
@@ -122,27 +149,35 @@ function handleProps(elm, props) {
     if (isObject(props)) {
         for (const key in props) {
             const val = props[key];
-            //   class ==> array or string
-            setAttribute(elm, key, val);
+            if (isEvent(key, val)) {
+                handleEvent(elm, key, val);
+            }
+            else {
+                handleAttributes(elm, key, val);
+            }
         }
     }
 }
-function mountChildren(elm, children) {
+function mountChildren(elm, children, shapeFlags) {
     //  children --->> string or Array
-    if (typeof children == "string") {
+    if (shapeFlags & 4 /* TEXT_CHLIDREN */) {
         elm.textContent = children;
     }
-    else if (Array.isArray(children)) {
-        children.forEach((item) => {
-            patch(item, elm);
-        });
+    else if (shapeFlags & 8 /* ARRAY_CHLIDREN */) {
+        patchMountChildren(children, elm);
     }
+}
+function patchMountChildren(children, elm) {
+    children.forEach((item) => {
+        patch(item, elm);
+    });
 }
 const publicPropHandles = {
     class: (elm, val) => (Array.isArray(val) ? val.join(" ") : val),
     style: (elm, val) => typeof isObject(val) ? extend(elm.style, val) : val,
 };
-function setAttribute(elm, key, val) {
+function handleAttributes(elm, key, val) {
+    // class ==> array or string
     const handlePublicFn = Reflect.get(publicPropHandles, key);
     let result = "";
     if (handlePublicFn) {
@@ -155,6 +190,18 @@ function setAttribute(elm, key, val) {
     }
     elm.setAttribute(key, result);
 }
+/**
+ * 命名 onC 是一on开头且三个字母大写
+ * @param event  事件名称
+ * @param cb  回调函数
+ * @returns
+ */
+function isEvent(event, cb) {
+    return isOn(event) && isFunction(cb);
+}
+function handleEvent(elm, event, cb) {
+    elm.addEventListener(getEventName(event), cb);
+}
 
 function render(vnode, container) {
     // 处理虚拟Dom
@@ -164,11 +211,12 @@ function patch(vnode, container) {
     handleProcessEffect(vnode, container);
 }
 function handleProcessEffect(vnode, container) {
-    if (typeof vnode.type == "string") {
+    const { shapeFlags } = vnode;
+    if (shapeFlags & 1 /* ELEMENT */) {
         // 处理Dom
         processElement(vnode, container);
     }
-    else if (isObject(vnode.type)) {
+    else if (shapeFlags & 2 /* STATEFUL_COMPONENT */) {
         // 处理组件
         processComponent(vnode, container);
     }

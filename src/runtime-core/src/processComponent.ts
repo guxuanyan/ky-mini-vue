@@ -3,7 +3,7 @@
  */
 
 import { createComponentInstance, setupComponent } from "./component";
-import { publicInstanceProxyHandles } from "./publicComponentHandles";
+import { publicInstanceProxyHandles } from "./publicInstanceProxyHandles";
 import { patch } from "./render";
 
 export function processComponent(vnode: any, container: any) {
@@ -15,7 +15,11 @@ function mountComponent(vnode: any, container: any) {
   // 创建组件实例
   const instance = createComponentInstance(vnode);
   // 设置组件代理
-  Reflect.set(instance, "proxy", new Proxy({ _: instance }, publicInstanceProxyHandles));
+  Reflect.set(
+    instance,
+    "proxy",
+    new Proxy({ _: instance }, publicInstanceProxyHandles)
+  );
   // 调用组件setup
   setupComponent(instance);
   // 调用render

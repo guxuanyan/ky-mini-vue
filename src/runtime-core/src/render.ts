@@ -1,4 +1,5 @@
 import { isObject } from "../../tools";
+import { ShapeFlags } from "../../tools/ShapeFlags";
 import { processComponent } from "./processComponent";
 import { processElement } from "./processElement";
 
@@ -11,10 +12,11 @@ export function patch(vnode: any, container: any) {
 }
 
 function handleProcessEffect(vnode: any, container: any) {
-  if (typeof vnode.type == "string") {
+  const { shapeFlags } = vnode;
+  if (shapeFlags & ShapeFlags.ELEMENT) {
     // 处理Dom
     processElement(vnode, container);
-  } else if (isObject(vnode.type)) {
+  } else if (shapeFlags & ShapeFlags.STATEFUL_COMPONENT) {
     // 处理组件
     processComponent(vnode, container);
   }

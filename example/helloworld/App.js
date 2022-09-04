@@ -8,6 +8,7 @@ export default {
       {
         id: "root",
       },
+
       //  ----- string
       // "hello " + this.msg
       //  ----- array > {type, props, children}
@@ -18,6 +19,9 @@ export default {
             class: ["red", "title"],
             style: {
               color: "pink",
+            },
+            onClick(e) {
+              console.log("click", e);
             },
           },
           "implement： " + this.msg
