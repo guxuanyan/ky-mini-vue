@@ -12,6 +12,7 @@ export function processElement(vnode: any, container: any) {
   // TODO: update
 }
 
+
 function mountElement(initialVNode: any, container: any) {
   const { type: tag, props, children, shapeFlags } = initialVNode;
   const elm = document.createElement(tag);
@@ -21,6 +22,7 @@ function mountElement(initialVNode: any, container: any) {
   initialVNode.elm = elm;
   container.append(elm);
 }
+
 
 function handleProps(elm: any, props: any) {
   // props > string or object
@@ -36,6 +38,7 @@ function handleProps(elm: any, props: any) {
   }
 }
 
+
 function mountChildren(elm: any, children: any, shapeFlags: any) {
   //  children --->> string or Array
   if (shapeFlags & ShapeFlags.TEXT_CHLIDREN) {
@@ -45,17 +48,20 @@ function mountChildren(elm: any, children: any, shapeFlags: any) {
   }
 }
 
+
 function patchMountChildren(children: Array<any>, elm: any) {
   children.forEach((item) => {
     patch(item, elm);
   });
 }
 
+
 const publicPropHandles = {
   class: (elm: any, val: any) => (Array.isArray(val) ? val.join(" ") : val),
   style: (elm: any, val: any) =>
     typeof isObject(val) ? extend(elm.style, val) : val,
 };
+
 
 function handleAttributes(elm: any, key: string, val: any): any {
   // class ==> array or string

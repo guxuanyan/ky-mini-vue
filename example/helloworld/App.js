@@ -1,6 +1,7 @@
 import { h } from "../../libs/dist/build-mini-vue.esm.js";
-
+import Foo from "./Foo.js";
 export default {
+  name: "App",
   render() {
     Reflect.set(window, "self", this);
     return h(
@@ -36,6 +37,9 @@ export default {
           },
           "需要" + this.implement.join("、") + "核心模块。"
         ),
+        h(Foo, {
+          count: 1111111111111,
+        }),
       ]
     );
   },

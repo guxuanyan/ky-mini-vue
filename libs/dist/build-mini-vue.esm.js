@@ -13,6 +13,7 @@ function getEventName(str) {
     return str.slice(2).toLowerCase();
 }
 const isFunction = (fn) => typeof fn == "function";
+const hasOwn = (target, key) => target.hasOwnProperty(key);
 
 function createVNode(type, props, children) {
     const vnode = {
@@ -44,18 +45,137 @@ function h(type, props, children) {
     return createVNode(type, props, children);
 }
 
+/**
+ *
+ * @abstract ReactiveEffect
+ */
+// 全局容器
+/**
+ *
+ * targetMap
+ * 存储
+ * [] 其中为描述词
+ * {
+ *  [target]: {
+ *      [key]: new Set([
+ *          [effect]
+ *      ])
+ *   }
+ * }
+ * dep 存储所有的fn
+ */
+const targetMap = new Map();
+// 收集 effect 的容器 用于 stop 删除
+new Array();
+// 触发依赖
+function trigger(target, key) {
+    const depMap = targetMap.get(target);
+    if (!depMap)
+        return;
+    const dep = depMap.get(key);
+    if (!dep)
+        return;
+    triggerEffects(dep);
+}
+function triggerEffects(deps) {
+    for (const effect of deps) {
+        if (effect.scheduler) {
+            effect.scheduler();
+        }
+        else {
+            effect._run();
+        }
+    }
+}
+
+const get = createGetter();
+const set = createSetter();
+const readonlyGet = createGetter(true);
+const shallowReadonlyGet = createGetter(true, true);
+function createGetter(isReadonly = false, isShallow = false) {
+    return function (target, key) {
+        if (key == "__is-readonly" /* ISREADONLY */) {
+            return isReadonly;
+        }
+        if (key == "__is_reactive" /* ISREACTIVE */) {
+            return !isReadonly;
+        }
+        const res = Reflect.get(target, key);
+        if (isShallow) {
+            return res;
+        }
+        if (isObject(res)) {
+            return isReadonly ? readonly(res) : reactive(res);
+        }
+        return res;
+    };
+}
+function createSetter(shallow = false) {
+    return function (target, key, value) {
+        if (shallow == true) {
+            return;
+        }
+        const result = Reflect.set(target, key, value);
+        trigger(target, key);
+        return result;
+    };
+}
+const mutableHandlers = {
+    get,
+    set,
+};
+const readonlyHandlers = {
+    get: readonlyGet,
+    set(target, key) {
+        console.warn(`Cannot be modified because it is read-only：${JSON.stringify(target)}`);
+        return Reflect.get(target, key);
+    },
+};
+const shallowReadonlyHandles = extend({}, readonlyHandlers, {
+    get: shallowReadonlyGet,
+});
+
+/**
+ *
+ * @returns {Proxy}
+ * @description
+ * ?返回一个Proxy 触发get的时候收集依赖，触发set的时候触发依赖
+ *
+ *
+ *
+ */
+function reactive(raw) {
+    return createProxyObject(raw, mutableHandlers);
+}
+function readonly(raw) {
+    return createProxyObject(raw, readonlyHandlers);
+}
+function createProxyObject(raw, ProxyHandlers) {
+    return new Proxy(raw, ProxyHandlers);
+}
+function shallowReadonly(raw) {
+    // raw
+    return createProxyObject(raw, shallowReadonlyHandles);
+}
+
+function initProps(instance) {
+    instance.props = instance.vnode.props || {};
+}
+
 function createComponentInstance(vnode) {
     const component = {
         vnode,
         type: vnode.type,
         setupState: {},
         proxy: null,
+        props: null,
     };
     return component;
 }
 function setupComponent(instance) {
     // TODO:
     // initProps
+    initProps(instance);
     // initSlots
     // vue3 里除了有状态的组件还有函数组件（没有状态）
     setupStatefulComponent(instance);
@@ -65,14 +185,14 @@ function setupStatefulComponent(instance) {
     const { setup } = Component;
     if (setup) {
         // function == > render fn or Object
-        const setupResult = setup();
+        const setupResult = setup(shallowReadonly(instance.props));
         handleSetupResult(instance, setupResult);
     }
 }
 function handleSetupResult(instance, setupResult) {
     // TODO:
     // function
-    if (typeof setupResult == "object") {
+    if (isObject(setupResult)) {
         instance.setupState = setupResult;
     }
     // 查看是不是有 render
@@ -92,8 +212,12 @@ const componentHandlesImpl = {
 const publicInstanceProxyHandles = {
     get(target, key) {
         const instance = Reflect.get(target, "_");
-        if (key in instance.setupState) {
-            return Reflect.get(instance.setupState, key);
+        const { setupState, props } = instance;
+        if (hasOwn(setupState, key)) {
+            return Reflect.get(setupState, key);
+        }
+        else if (hasOwn(props, key)) {
+            return Reflect.get(props, key);
         }
         const componentHandlesResult = Reflect.get(componentHandlesImpl, key);
         if (componentHandlesResult) {

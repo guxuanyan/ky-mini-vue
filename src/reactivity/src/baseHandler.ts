@@ -20,7 +20,7 @@ export function createGetter(
     if (key == ReactiveFlags.ISREADONLY) {
       return isReadonly;
     }
-    
+
     if (key == ReactiveFlags.ISREACTIVE) {
       return !isReadonly;
     }
@@ -62,9 +62,7 @@ export const mutableHandlers = {
 export const readonlyHandlers = {
   get: readonlyGet,
   set(target: any, key: any) {
-    console.warn(`
-                Cannot be modified because it is read-only：${target}
-            `);
+    console.warn(`Cannot be modified because it is read-only：${JSON.stringify(target)}`);
     return Reflect.get(target, key);
   },
 };

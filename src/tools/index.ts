@@ -23,3 +23,5 @@ export function getEventName(str: string) {
 }
 
 export const isFunction = (fn: any) => typeof fn == "function";
+
+export const hasOwn = (target: object, key: any) => target.hasOwnProperty(key);

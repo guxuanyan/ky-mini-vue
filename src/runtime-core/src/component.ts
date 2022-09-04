@@ -1,9 +1,14 @@
+import { shallowReadonly } from "../../reactivity/src/reactive";
+import { isObject } from "../../tools";
+import { initProps } from "./initProps";
+
 export function createComponentInstance(vnode: any) {
   const component = {
     vnode,
     type: vnode.type,
     setupState: {},
     proxy: null,
+    props: null,
   };
   return component;
 }
@@ -11,6 +16,7 @@ export function createComponentInstance(vnode: any) {
 export function setupComponent(instance: any) {
   // TODO:
   // initProps
+  initProps(instance);
   // initSlots
   // vue3 里除了有状态的组件还有函数组件（没有状态）
   setupStatefulComponent(instance);
@@ -21,7 +27,7 @@ function setupStatefulComponent(instance: any) {
   const { setup } = Component;
   if (setup) {
     // function == > render fn or Object
-    const setupResult = setup();
+    const setupResult = setup(shallowReadonly(instance.props));
     handleSetupResult(instance, setupResult);
   }
 }
@@ -29,7 +35,7 @@ function setupStatefulComponent(instance: any) {
 function handleSetupResult(instance: any, setupResult: any) {
   // TODO:
   // function
-  if (typeof setupResult == "object") {
+  if (isObject(setupResult)) {
     instance.setupState = setupResult;
   }
   // 查看是不是有 render
