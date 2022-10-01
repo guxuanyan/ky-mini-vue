@@ -2,7 +2,14 @@
  * 处理DOM vnode to dom
  */
 
-import { extend, getEventName, isFunction, isObject, isOn } from "../../tools";
+import {
+  extend,
+  getEventName,
+  isFunction,
+  isObject,
+  isOn,
+  isString,
+} from "../../tools";
 import { ShapeFlags } from "../../tools/ShapeFlags";
 import { patch } from "./render";
 
@@ -11,7 +18,6 @@ export function processElement(vnode: any, container: any) {
   mountElement(vnode, container);
   // TODO: update
 }
-
 
 function mountElement(initialVNode: any, container: any) {
   const { type: tag, props, children, shapeFlags } = initialVNode;
@@ -22,7 +28,6 @@ function mountElement(initialVNode: any, container: any) {
   initialVNode.elm = elm;
   container.append(elm);
 }
-
 
 function handleProps(elm: any, props: any) {
   // props > string or object
@@ -38,7 +43,6 @@ function handleProps(elm: any, props: any) {
   }
 }
 
-
 function mountChildren(elm: any, children: any, shapeFlags: any) {
   //  children --->> string or Array
   if (shapeFlags & ShapeFlags.TEXT_CHLIDREN) {
@@ -48,20 +52,17 @@ function mountChildren(elm: any, children: any, shapeFlags: any) {
   }
 }
 
-
 function patchMountChildren(children: Array<any>, elm: any) {
   children.forEach((item) => {
     patch(item, elm);
   });
 }
 
-
 const publicPropHandles = {
   class: (elm: any, val: any) => (Array.isArray(val) ? val.join(" ") : val),
   style: (elm: any, val: any) =>
     typeof isObject(val) ? extend(elm.style, val) : val,
 };
-
 
 function handleAttributes(elm: any, key: string, val: any): any {
   // class ==> array or string

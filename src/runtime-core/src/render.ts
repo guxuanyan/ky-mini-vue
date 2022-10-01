@@ -1,4 +1,3 @@
-import { isObject } from "../../tools";
 import { ShapeFlags } from "../../tools/ShapeFlags";
 import { processComponent } from "./processComponent";
 import { processElement } from "./processElement";

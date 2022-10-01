@@ -25,3 +25,17 @@ export function getEventName(str: string) {
 export const isFunction = (fn: any) => typeof fn == "function";
 
 export const hasOwn = (target: object, key: any) => target.hasOwnProperty(key);
+
+export function cnamelize(str: string) {
+  return str.replace(/-(\w)/, (_: any, c: string) => {
+    return c.toUpperCase();
+  });
+}
+
+export function capitalize(str: string) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+export function toHandleKey(str: string) {
+  return str ? "on" + capitalize(str) : "";
+}

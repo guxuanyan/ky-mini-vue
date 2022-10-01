@@ -1,4 +1,4 @@
-import { isArray, isString } from "../../tools";
+import { isArray, isObject, isString } from "../../tools";
 import { ShapeFlags } from "../../tools/ShapeFlags";
 
 export function createVNode(type: any, props?: any, children?: any) {
@@ -9,10 +9,9 @@ export function createVNode(type: any, props?: any, children?: any) {
     elm: null,
     shapeFlags: getTypeShapeFlags(type),
   };
-  getChildrenShapeFlags(children, vnode);
+  childrenShapeFlags(children, vnode);
   return vnode;
 }
-
 
 function getTypeShapeFlags(type: any) {
   return typeof type == "string"
@@ -20,12 +19,15 @@ function getTypeShapeFlags(type: any) {
     : ShapeFlags.STATEFUL_COMPONENT;
 }
 
-
-function getChildrenShapeFlags(children: any, vnode: any) {
+function childrenShapeFlags(children: any, vnode: any) {
   // children 的值
   if (isString(children)) {
     vnode.shapeFlags |= ShapeFlags.TEXT_CHLIDREN;
   } else if (isArray(children)) {
     vnode.shapeFlags |= ShapeFlags.ARRAY_CHLIDREN;
+  }
+  // children 是否 是插槽
+  if (vnode.shapeFlags & ShapeFlags.STATEFUL_COMPONENT && isObject(children)) {
+    vnode.shapeFlags |= ShapeFlags.SLOTS_CHILDREN;
   }
 }

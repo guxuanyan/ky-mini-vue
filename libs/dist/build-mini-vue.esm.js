@@ -14,6 +14,17 @@ function getEventName(str) {
 }
 const isFunction = (fn) => typeof fn == "function";
 const hasOwn = (target, key) => target.hasOwnProperty(key);
+function cnamelize(str) {
+    return str.replace(/-(\w)/, (_, c) => {
+        return c.toUpperCase();
+    });
+}
+function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+function toHandleKey(str) {
+    return str ? "on" + capitalize(str) : "";
+}
 
 function createVNode(type, props, children) {
     const vnode = {
@@ -23,7 +34,7 @@ function createVNode(type, props, children) {
         elm: null,
         shapeFlags: getTypeShapeFlags(type),
     };
-    getChildrenShapeFlags(children, vnode);
+    childrenShapeFlags(children, vnode);
     return vnode;
 }
 function getTypeShapeFlags(type) {
@@ -31,13 +42,26 @@ function getTypeShapeFlags(type) {
         ? 1 /* ELEMENT */
         : 2 /* STATEFUL_COMPONENT */;
 }
-function getChildrenShapeFlags(children, vnode) {
+function childrenShapeFlags(children, vnode) {
     // children 的值
     if (isString(children)) {
         vnode.shapeFlags |= 4 /* TEXT_CHLIDREN */;
     }
     else if (isArray(children)) {
         vnode.shapeFlags |= 8 /* ARRAY_CHLIDREN */;
+    }
+    // children 是否 是插槽
+    if (vnode.shapeFlags & 2 /* STATEFUL_COMPONENT */ && isObject(children)) {
+        vnode.shapeFlags |= 16 /* SLOTS_CHILDREN */;
+    }
+}
+
+function renderSlots(slots, name, props) {
+    const slot = slots[name];
+    if (slot) {
+        if (isFunction(slot)) {
+            return createVNode("div", {}, slot(props));
+        }
     }
 }
 
@@ -158,8 +182,35 @@ function shallowReadonly(raw) {
     return createProxyObject(raw, shallowReadonlyHandles);
 }
 
+function emit(instance, event, ...args) {
+    const { props } = instance;
+    //   handle event name
+    let handlerName = toHandleKey(cnamelize(event));
+    const handles = Reflect.get(props, handlerName);
+    handles && handles(...args);
+}
+
 function initProps(instance) {
     instance.props = instance.vnode.props || {};
+}
+
+function initSlots(instance) {
+    const { vnode } = instance;
+    if (vnode.shapeFlags & 16 /* SLOTS_CHILDREN */) {
+        nomalizeObjectSlots(vnode.children, instance);
+    }
+}
+function nomalizeObjectSlots(children, instance) {
+    const slots = {};
+    for (const key in children) {
+        const value = children[key];
+        const fn = (props) => nomalizeSlotValue(value(props));
+        Reflect.set(slots, key, fn);
+    }
+    instance.slots = slots;
+}
+function nomalizeSlotValue(val) {
+    return isArray(val) ? val : [val];
 }
 
 function createComponentInstance(vnode) {
@@ -169,7 +220,10 @@ function createComponentInstance(vnode) {
         setupState: {},
         proxy: null,
         props: null,
+        slots: null,
+        $emit: () => { },
     };
+    component.$emit = emit.bind(null, component);
     return component;
 }
 function setupComponent(instance) {
@@ -177,6 +231,7 @@ function setupComponent(instance) {
     // initProps
     initProps(instance);
     // initSlots
+    initSlots(instance);
     // vue3 里除了有状态的组件还有函数组件（没有状态）
     setupStatefulComponent(instance);
 }
@@ -185,7 +240,10 @@ function setupStatefulComponent(instance) {
     const { setup } = Component;
     if (setup) {
         // function == > render fn or Object
-        const setupResult = setup(shallowReadonly(instance.props));
+        const shallowProps = shallowReadonly(instance.props);
+        const setupResult = setup(shallowProps, {
+            emit: instance.$emit,
+        });
         handleSetupResult(instance, setupResult);
     }
 }
@@ -206,8 +264,9 @@ function finishComponentSetup(instance) {
 }
 
 const componentHandlesImpl = {
-    $el: (instance) => Reflect.get(instance.vnode, "elm"),
-    $data: (instance) => Reflect.get(instance, "setupState"),
+    $el: (i) => Reflect.get(i.vnode, "elm"),
+    $data: (i) => Reflect.get(i, "setupState"),
+    $slots: (i) => Reflect.get(i, "slots"),
 };
 const publicInstanceProxyHandles = {
     get(target, key) {
@@ -372,4 +431,4 @@ function handleRootContainer(rootContainer) {
     return rootContainer;
 }
 
-export { createApp, h };
+export { createApp, h, renderSlots };

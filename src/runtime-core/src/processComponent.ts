@@ -14,7 +14,7 @@ export function processComponent(vnode: any, container: any) {
 function mountComponent(vnode: any, container: any) {
   // 创建组件实例
   const instance = createComponentInstance(vnode);
-  // 设置组件代理
+    // 设置组件代理
   Reflect.set(
     instance,
     "proxy",
