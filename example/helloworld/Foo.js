@@ -6,6 +6,6 @@ export default {
     props.count++;
   },
   render() {
-    return h("h2", { style: { color: "skyblue" } }, "component child Foo.js: " + this.count);
+    return h("h2", { style: { color: "skyblue" } }, "Foo.js: " + this.msg);
   },
 };

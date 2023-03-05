@@ -1,5 +1,5 @@
 import { isArray, isObject, isString } from "../../tools";
-import { ShapeFlags } from "../../tools/ShapeFlags";
+import { ShapeFlags, Text } from "../../tools/ShapeFlags";
 
 export function createVNode(type: any, props?: any, children?: any) {
   const vnode = {
@@ -30,4 +30,8 @@ function childrenShapeFlags(children: any, vnode: any) {
   if (vnode.shapeFlags & ShapeFlags.STATEFUL_COMPONENT && isObject(children)) {
     vnode.shapeFlags |= ShapeFlags.SLOTS_CHILDREN;
   }
+}
+
+export function createTextVNode(text: String) {
+  return createVNode(Text, {}, text);
 }

@@ -11,7 +11,8 @@ export default {
     const name = "kyle";
     return h("div", {}, [
       renderSlots(this.$slots, "header"),
-      h("b", {}, "string"),
+      h("hr", {}, "这是一条分割线"),
+      // 作用域插槽
       renderSlots(this.$slots, "footer", { name }),
     ]);
   },

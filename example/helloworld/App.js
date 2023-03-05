@@ -25,7 +25,7 @@ export default {
               console.log("click", e);
             },
           },
-          "implement： " + this.msg
+          "实现的东西： " + this.msg
         ),
         h(
           "span",
@@ -35,10 +35,11 @@ export default {
               "margin-left": "2em",
             },
           },
-          "需要" + this.implement.join("、") + "核心模块。"
+          "核心模块：" + this.implement.join("、") + ""
         ),
         h(Foo, {
-          count: 1111111111111,
+          msg: "这是组件类型",
+          count: 1,
         }),
       ]
     );

@@ -52,7 +52,7 @@ function mountChildren(elm: any, children: any, shapeFlags: any) {
   }
 }
 
-function patchMountChildren(children: Array<any>, elm: any) {
+export function patchMountChildren(children: Array<any>, elm: any) {
   children.forEach((item) => {
     patch(item, elm);
   });

@@ -1,4 +1,4 @@
-import { h } from "../../libs/dist/build-mini-vue.esm.js";
+import { h, createTextVNode } from "../../libs/dist/build-mini-vue.esm.js";
 import Foo from "./Foo.js";
 export default {
   name: "App",
@@ -14,7 +14,11 @@ export default {
       {},
       {
         header: () => h("header", {}, "header"),
-        footer: ({name}) => h("footer", {}, "footer-name: " + name),
+        // 作用域插槽
+        footer: (props) => [
+          h("p", {}, "footer(作用域插槽): " + props.name),
+          createTextVNode("你好呀"),
+        ],
       }
     );
     return h(

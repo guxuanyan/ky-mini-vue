@@ -26,6 +26,14 @@ function toHandleKey(str) {
     return str ? "on" + capitalize(str) : "";
 }
 
+/**
+ * ShapeFlags
+ * | 比较
+ * & 查
+ */
+const Fragment = Symbol("Fragment");
+const Text = Symbol("Text");
+
 function createVNode(type, props, children) {
     const vnode = {
         type,
@@ -55,12 +63,15 @@ function childrenShapeFlags(children, vnode) {
         vnode.shapeFlags |= 16 /* SLOTS_CHILDREN */;
     }
 }
+function createTextVNode(text) {
+    return createVNode(Text, {}, text);
+}
 
 function renderSlots(slots, name, props) {
     const slot = slots[name];
     if (slot) {
         if (isFunction(slot)) {
-            return createVNode("div", {}, slot(props));
+            return createVNode(Fragment, {}, slot(props));
         }
     }
 }
@@ -394,15 +405,34 @@ function patch(vnode, container) {
     handleProcessEffect(vnode, container);
 }
 function handleProcessEffect(vnode, container) {
-    const { shapeFlags } = vnode;
-    if (shapeFlags & 1 /* ELEMENT */) {
-        // 处理Dom
-        processElement(vnode, container);
+    const { type, shapeFlags } = vnode;
+    // Fragment
+    switch (type) {
+        case Fragment:
+            processFragment(vnode, container);
+            break;
+        case Text:
+            processText(vnode, container);
+            break;
+        default:
+            if (shapeFlags & 1 /* ELEMENT */) {
+                // 处理Dom
+                processElement(vnode, container);
+            }
+            else if (shapeFlags & 2 /* STATEFUL_COMPONENT */) {
+                // 处理组件
+                processComponent(vnode, container);
+            }
+            break;
     }
-    else if (shapeFlags & 2 /* STATEFUL_COMPONENT */) {
-        // 处理组件
-        processComponent(vnode, container);
-    }
+}
+function processFragment(vnode, container) {
+    patchMountChildren(vnode.children, container);
+}
+function processText(vnode, container) {
+    const { children } = vnode;
+    const textNode = (vnode.elm = document.createTextNode(children));
+    container.append(textNode);
 }
 
 /**
@@ -431,4 +461,4 @@ function handleRootContainer(rootContainer) {
     return rootContainer;
 }
 
-export { createApp, h, renderSlots };
+export { createApp, createTextVNode, h, renderSlots };
