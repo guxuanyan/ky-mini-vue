@@ -252,9 +252,11 @@ function setupStatefulComponent(instance) {
     if (setup) {
         // function == > render fn or Object
         const shallowProps = shallowReadonly(instance.props);
+        setCurrentInstance(instance);
         const setupResult = setup(shallowProps, {
             emit: instance.$emit,
         });
+        setCurrentInstance(null);
         handleSetupResult(instance, setupResult);
     }
 }
@@ -272,6 +274,13 @@ function finishComponentSetup(instance) {
     if (Component.render) {
         instance.render = Component.render;
     }
+}
+let currentInstance = null;
+function getCurrentInstance() {
+    return currentInstance;
+}
+function setCurrentInstance(instance) {
+    currentInstance = instance;
 }
 
 const componentHandlesImpl = {
@@ -461,4 +470,4 @@ function handleRootContainer(rootContainer) {
     return rootContainer;
 }
 
-export { createApp, createTextVNode, h, renderSlots };
+export { createApp, createTextVNode, getCurrentInstance, h, renderSlots };

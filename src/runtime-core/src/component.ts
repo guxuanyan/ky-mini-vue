@@ -36,9 +36,11 @@ function setupStatefulComponent(instance: any) {
   if (setup) {
     // function == > render fn or Object
     const shallowProps = shallowReadonly(instance.props);
+    setCurrentInstance(instance);
     const setupResult = setup(shallowProps, {
       emit: instance.$emit,
     });
+    setCurrentInstance(null);
     handleSetupResult(instance, setupResult);
   }
 }
@@ -57,4 +59,13 @@ function finishComponentSetup(instance: any) {
   if (Component.render) {
     instance.render = Component.render;
   }
+}
+let currentInstance: any = null;
+
+export function getCurrentInstance() {
+  return currentInstance;
+}
+
+function setCurrentInstance(instance: any) {
+  currentInstance = instance;
 }
