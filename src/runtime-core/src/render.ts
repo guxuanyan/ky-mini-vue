@@ -4,19 +4,19 @@ import { patchMountChildren, processElement } from "./processElement";
 
 export function render(vnode: any, container: any) {
   // 处理虚拟Dom
-  patch(vnode, container);
+  patch(vnode, container, null);
 }
-export function patch(vnode: any, container: any) {
-  handleProcessEffect(vnode, container);
+export function patch(vnode: any, container: any, parenComponent: any) {
+  handleProcessEffect(vnode, container, parenComponent);
 }
 
-function handleProcessEffect(vnode: any, container: any) {
+function handleProcessEffect(vnode: any, container: any, parenComponent: any) {
   const { type, shapeFlags } = vnode;
 
   // Fragment
   switch (type) {
     case Fragment:
-      processFragment(vnode, container);
+      processFragment(vnode, container, parenComponent);
       break;
     case Text:
       processText(vnode, container);
@@ -25,17 +25,17 @@ function handleProcessEffect(vnode: any, container: any) {
     default:
       if (shapeFlags & ShapeFlags.ELEMENT) {
         // 处理Dom
-        processElement(vnode, container);
+        processElement(vnode, container, parenComponent);
       } else if (shapeFlags & ShapeFlags.STATEFUL_COMPONENT) {
         // 处理组件
-        processComponent(vnode, container);
+        processComponent(vnode, container, parenComponent);
       }
       break;
   }
 }
 
-function processFragment(vnode: any, container: any) {
-  patchMountChildren(vnode.children, container);
+function processFragment(vnode: any, container: any, parenComponent: any) {
+  patchMountChildren(vnode.children, container, parenComponent);
 }
 function processText(vnode: any, container: any) {
   const { children } = vnode;

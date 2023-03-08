@@ -2,29 +2,26 @@
  * 处理DOM vnode to dom
  */
 
-import {
-  extend,
-  getEventName,
-  isFunction,
-  isObject,
-  isOn,
-  isString,
-} from "../../tools";
+import { extend, getEventName, isFunction, isObject, isOn } from "../../tools";
 import { ShapeFlags } from "../../tools/ShapeFlags";
 import { patch } from "./render";
 
-export function processElement(vnode: any, container: any) {
+export function processElement(
+  vnode: any,
+  container: any,
+  parenComponent: any
+) {
   // init or update
-  mountElement(vnode, container);
+  mountElement(vnode, container, parenComponent);
   // TODO: update
 }
 
-function mountElement(initialVNode: any, container: any) {
+function mountElement(initialVNode: any, container: any, parenComponent: any) {
   const { type: tag, props, children, shapeFlags } = initialVNode;
   const elm = document.createElement(tag);
   handleProps(elm, props);
 
-  mountChildren(elm, children, shapeFlags);
+  mountChildren(elm, children, shapeFlags, parenComponent);
   initialVNode.elm = elm;
   container.append(elm);
 }
@@ -43,18 +40,27 @@ function handleProps(elm: any, props: any) {
   }
 }
 
-function mountChildren(elm: any, children: any, shapeFlags: any) {
+function mountChildren(
+  elm: any,
+  children: any,
+  shapeFlags: any,
+  parentComponent: any
+) {
   //  children --->> string or Array
   if (shapeFlags & ShapeFlags.TEXT_CHLIDREN) {
     elm.textContent = children;
   } else if (shapeFlags & ShapeFlags.ARRAY_CHLIDREN) {
-    patchMountChildren(children, elm);
+    patchMountChildren(children, elm, parentComponent);
   }
 }
 
-export function patchMountChildren(children: Array<any>, elm: any) {
+export function patchMountChildren(
+  children: Array<any>,
+  elm: any,
+  parenComponent: any
+) {
   children.forEach((item) => {
-    patch(item, elm);
+    patch(item, elm, parenComponent);
   });
 }
 
