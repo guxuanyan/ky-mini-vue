@@ -289,193 +289,6 @@ function setCurrentInstance(instance) {
     currentInstance = instance;
 }
 
-const componentHandlesImpl = {
-    $el: (i) => Reflect.get(i.vnode, "elm"),
-    $data: (i) => Reflect.get(i, "setupState"),
-    $slots: (i) => Reflect.get(i, "slots"),
-};
-const publicInstanceProxyHandles = {
-    get(target, key) {
-        const instance = Reflect.get(target, "_");
-        const { setupState, props } = instance;
-        if (hasOwn(setupState, key)) {
-            return Reflect.get(setupState, key);
-        }
-        else if (hasOwn(props, key)) {
-            return Reflect.get(props, key);
-        }
-        const componentHandlesResult = Reflect.get(componentHandlesImpl, key);
-        if (componentHandlesResult) {
-            return componentHandlesResult(instance);
-        }
-    },
-};
-
-/**
- * 处理组件
- */
-function processComponent(vnode, container, parenComponent) {
-    // 挂载组件`
-    mountComponent(vnode, container, parenComponent);
-}
-function mountComponent(vnode, container, parenComponent) {
-    // 创建组件实例
-    const instance = createComponentInstance(vnode, parenComponent);
-    // 设置组件代理
-    Reflect.set(instance, "proxy", new Proxy({ _: instance }, publicInstanceProxyHandles));
-    // 调用组件setup
-    setupComponent(instance);
-    // 调用render
-    setupRenderEffect(instance, container, vnode);
-}
-function setupRenderEffect(instance, container, vnode) {
-    // call 后续参数传入参数列表
-    // subTree == root element
-    const { proxy } = instance;
-    const subTree = instance.render.call(proxy);
-    patch(subTree, container, instance);
-    vnode.elm = subTree.elm;
-}
-
-/**
- * 处理DOM vnode to dom
- */
-function processElement(vnode, container, parenComponent) {
-    // init or update
-    mountElement(vnode, container, parenComponent);
-    // TODO: update
-}
-function mountElement(initialVNode, container, parenComponent) {
-    const { type: tag, props, children, shapeFlags } = initialVNode;
-    const elm = document.createElement(tag);
-    handleProps(elm, props);
-    mountChildren(elm, children, shapeFlags, parenComponent);
-    initialVNode.elm = elm;
-    container.append(elm);
-}
-function handleProps(elm, props) {
-    // props > string or object
-    if (isObject(props)) {
-        for (const key in props) {
-            const val = props[key];
-            if (isEvent(key, val)) {
-                handleEvent(elm, key, val);
-            }
-            else {
-                handleAttributes(elm, key, val);
-            }
-        }
-    }
-}
-function mountChildren(elm, children, shapeFlags, parentComponent) {
-    //  children --->> string or Array
-    if (shapeFlags & 4 /* TEXT_CHLIDREN */) {
-        elm.textContent = children;
-    }
-    else if (shapeFlags & 8 /* ARRAY_CHLIDREN */) {
-        patchMountChildren(children, elm, parentComponent);
-    }
-}
-function patchMountChildren(children, elm, parenComponent) {
-    children.forEach((item) => {
-        patch(item, elm, parenComponent);
-    });
-}
-const publicPropHandles = {
-    class: (elm, val) => (Array.isArray(val) ? val.join(" ") : val),
-    style: (elm, val) => typeof isObject(val) ? extend(elm.style, val) : val,
-};
-function handleAttributes(elm, key, val) {
-    // class ==> array or string
-    const handlePublicFn = Reflect.get(publicPropHandles, key);
-    let result = "";
-    if (handlePublicFn) {
-        result = handlePublicFn(elm, val);
-        if (typeof result != "string")
-            return;
-    }
-    else {
-        result = val;
-    }
-    elm.setAttribute(key, result);
-}
-/**
- * 命名 onC 是一on开头且三个字母大写
- * @param event  事件名称
- * @param cb  回调函数
- * @returns
- */
-function isEvent(event, cb) {
-    return isOn(event) && isFunction(cb);
-}
-function handleEvent(elm, event, cb) {
-    elm.addEventListener(getEventName(event), cb);
-}
-
-function render(vnode, container) {
-    // 处理虚拟Dom
-    patch(vnode, container, null);
-}
-function patch(vnode, container, parenComponent) {
-    handleProcessEffect(vnode, container, parenComponent);
-}
-function handleProcessEffect(vnode, container, parenComponent) {
-    const { type, shapeFlags } = vnode;
-    // Fragment
-    switch (type) {
-        case Fragment:
-            processFragment(vnode, container, parenComponent);
-            break;
-        case Text:
-            processText(vnode, container);
-            break;
-        default:
-            if (shapeFlags & 1 /* ELEMENT */) {
-                // 处理Dom
-                processElement(vnode, container, parenComponent);
-            }
-            else if (shapeFlags & 2 /* STATEFUL_COMPONENT */) {
-                // 处理组件
-                processComponent(vnode, container, parenComponent);
-            }
-            break;
-    }
-}
-function processFragment(vnode, container, parenComponent) {
-    patchMountChildren(vnode.children, container, parenComponent);
-}
-function processText(vnode, container) {
-    const { children } = vnode;
-    const textNode = (vnode.elm = document.createTextNode(children));
-    container.append(textNode);
-}
-
-/**
- *
- * @param rootComponent 组件
- * @returns Object mount
- */
-function createApp(rootComponent) {
-    return {
-        /**
-         *
-         * @param rootContainer 根元素或元素名
-         */
-        mount(rootContainer) {
-            // component --> 转换为虚拟节点
-            const vnode = createVNode(rootComponent);
-            const elem = handleRootContainer(rootContainer);
-            render(vnode, elem);
-        },
-    };
-}
-function handleRootContainer(rootContainer) {
-    if (typeof rootContainer == "string") {
-        return document.querySelector(rootContainer);
-    }
-    return rootContainer;
-}
-
 function provide(key, value) {
     const currentInstace = getCurrentInstance();
     if (currentInstace) {
@@ -505,10 +318,226 @@ function inject(key, defaultVal) {
     }
 }
 
+function createAppApi(render) {
+    /**
+     *
+     * @param rootComponent 组件
+     * @returns Object mount
+     */
+    return function createApp(rootComponent) {
+        return {
+            /**
+             *
+             * @param rootContainer 根元素或元素名
+             */
+            mount(rootContainer) {
+                // component --> 转换为虚拟节点
+                const vnode = createVNode(rootComponent);
+                const containerElm = handleRootContainer(rootContainer);
+                render(vnode, containerElm);
+            },
+        };
+    };
+}
+function handleRootContainer(rootContainer) {
+    if (typeof rootContainer == "string") {
+        return document.querySelector(rootContainer);
+    }
+    return rootContainer;
+}
+
+const componentHandlesImpl = {
+    $el: (i) => Reflect.get(i.vnode, "elm"),
+    $data: (i) => Reflect.get(i, "setupState"),
+    $slots: (i) => Reflect.get(i, "slots"),
+};
+const publicInstanceProxyHandles = {
+    get(target, key) {
+        const instance = Reflect.get(target, "_");
+        const { setupState, props } = instance;
+        if (hasOwn(setupState, key)) {
+            return Reflect.get(setupState, key);
+        }
+        else if (hasOwn(props, key)) {
+            return Reflect.get(props, key);
+        }
+        const componentHandlesResult = Reflect.get(componentHandlesImpl, key);
+        if (componentHandlesResult) {
+            return componentHandlesResult(instance);
+        }
+    },
+};
+
+/**
+ * 处理组件
+ */
+function processComponent(vnode, container, parenComponent, fns) {
+    const { _patch } = fns;
+    // 挂载组件`
+    mountComponent(vnode, container, parenComponent, _patch);
+}
+function mountComponent(vnode, container, parenComponent, patch) {
+    // 创建组件实例
+    const instance = createComponentInstance(vnode, parenComponent);
+    // 设置组件代理
+    Reflect.set(instance, "proxy", new Proxy({ _: instance }, publicInstanceProxyHandles));
+    // 调用组件setup
+    setupComponent(instance);
+    // 调用render
+    setupRenderEffect(instance, container, vnode, patch);
+}
+function setupRenderEffect(instance, container, vnode, patch) {
+    // call 后续参数传入参数列表
+    // subTree == root element
+    const { proxy } = instance;
+    const subTree = instance.render.call(proxy);
+    patch(subTree, container, instance);
+    vnode.elm = subTree.elm;
+}
+
+/**
+ * 处理DOM vnode to dom
+ */
+function processElement(vnode, container, parenComponent, fns) {
+    // init or update
+    mountElement(vnode, container, parenComponent, fns);
+    // TODO: update
+}
+function mountElement(initialVNode, container, parenComponent, fns) {
+    const { _patch, _createElement, _patchProps, _insert } = fns;
+    const { type: tag, props, children, shapeFlags } = initialVNode;
+    // const elm = document.createElement(tag);
+    const elm = _createElement(tag);
+    // handleProps(elm, props);
+    _patchProps(elm, props);
+    mountChildren(elm, children, shapeFlags, parenComponent, _patch);
+    initialVNode.elm = elm;
+    // container.append(elm);
+    _insert(elm, container);
+}
+function mountChildren(elm, children, shapeFlags, parentComponent, patch) {
+    //  children --->> string or Array
+    if (shapeFlags & 4 /* TEXT_CHLIDREN */) {
+        elm.textContent = children;
+    }
+    else if (shapeFlags & 8 /* ARRAY_CHLIDREN */) {
+        patchMountChildren(children, elm, parentComponent, patch);
+    }
+}
+function patchMountChildren(children, elm, parenComponent, patch) {
+    children.forEach((vnode) => {
+        patch(vnode, elm, parenComponent);
+    });
+}
+
+function createRenderer(options) {
+    const { createElement: _createElement, insert: _insert, patchProps: _patchProps, remove, } = options;
+    const fns = {
+        _patch: patch,
+        _createElement,
+        _patchProps,
+        _insert,
+    };
+    function render(vnode, container) {
+        // 处理虚拟Dom
+        patch(vnode, container, null);
+    }
+    function patch(vnode, container, parenComponent) {
+        handleProcessEffect(vnode, container, parenComponent);
+    }
+    function handleProcessEffect(vnode, container, parenComponent) {
+        const { type, shapeFlags } = vnode;
+        switch (type) {
+            case Fragment:
+                processFragment(vnode, container, parenComponent);
+                break;
+            case Text:
+                processText(vnode, container);
+                break;
+            default:
+                if (shapeFlags & 1 /* ELEMENT */) {
+                    // 处理Dom
+                    processElement(vnode, container, parenComponent, fns);
+                }
+                else if (shapeFlags & 2 /* STATEFUL_COMPONENT */) {
+                    // 处理组件
+                    processComponent(vnode, container, parenComponent, fns);
+                }
+                break;
+        }
+    }
+    function processFragment(vnode, container, parenComponent) {
+        patchMountChildren(vnode.children, container, parenComponent, patch);
+    }
+    function processText(vnode, container) {
+        const { children } = vnode;
+        const textNode = (vnode.elm = document.createTextNode(children));
+        container.append(textNode);
+    }
+    return { createApp: createAppApi(render) };
+}
+
+function isEvent(event, cb) {
+    return isOn(event) && isFunction(cb);
+}
+const publicPropHandles = {
+    class: (elm, val) => (Array.isArray(val) ? val.join(" ") : val),
+    style: (elm, val) => typeof isObject(val) ? extend(elm.style, val) : val,
+};
+function handleAttributes(elm, key, val) {
+    // class ==> array or string
+    const handlePublicFn = Reflect.get(publicPropHandles, key);
+    let result = "";
+    if (handlePublicFn) {
+        result = handlePublicFn(elm, val);
+        if (typeof result != "string")
+            return;
+    }
+    else {
+        result = val;
+    }
+    elm.setAttribute(key, result);
+}
+/**
+ * 命名 onC 是一on开头且三个字母大写
+ * @param event  事件名称
+ * @param cb  回调函数
+ * @returns
+ */
+function handleEvent(elm, event, cb) {
+    elm.addEventListener(getEventName(event), cb);
+}
+function createElement(tag) {
+    return document.createElement(tag);
+}
+function insert(elm, parent) {
+    parent.append(elm);
+}
+function patchProps(elm, props) {
+    // props > string or object
+    if (isObject(props)) {
+        for (const key in props) {
+            const val = props[key];
+            if (isEvent(key, val)) {
+                handleEvent(elm, key, val);
+            }
+            else {
+                handleAttributes(elm, key, val);
+            }
+        }
+    }
+}
+const renderder = createRenderer({ createElement, insert, patchProps });
+function createApp(...args) {
+    return renderder.createApp(...args);
+}
+
 exports.createApp = createApp;
+exports.createRenderer = createRenderer;
 exports.createTextVNode = createTextVNode;
 exports.getCurrentInstance = getCurrentInstance;
 exports.h = h;
 exports.inject = inject;
+exports.isEvent = isEvent;
 exports.provide = provide;
 exports.renderSlots = renderSlots;
